@@ -20,6 +20,14 @@ CONTENT_IMG_W = 500
 STYLE_IMG_H = 500
 STYLE_IMG_W = 500
 
+DATA_SET_DIR_PATH = "./data_set"
+TRAINING_DATA_DIR_PATH = f"{DATA_SET_DIR_PATH}/training"
+TRAINING_CONTENT_DIR_PATH = f"{TRAINING_DATA_DIR_PATH}/content"
+TRAINING_STYLE_DIR_PATH = f"{TRAINING_DATA_DIR_PATH}/style"
+TESTING_DATA_DIR_PATH = f"{DATA_SET_DIR_PATH}/testing"
+TESTING_CONTENT_DIR_PATH = f"{TESTING_DATA_DIR_PATH}/content"
+TESTING_STYLE_DIR_PATH = f"{TESTING_DATA_DIR_PATH}/style"
+
 class Encoder(object):
     def __init__(self):
         #initilize the data
@@ -45,10 +53,44 @@ def load_images(dir):
         cImg = load_img(filename, target_size=(CONTENT_IMG_W, CONTENT_IMG_H))
         list_of_images.append(cImg)
         print("load image",filename)
+
+def load_data():
+    x_training = load_images(TRAINING_CONTENT_DIR_PATH)
+    y_training = load_images(TRAINING_STYLE_DIR_PATH)
+    x_testing = load_images(TESTING_CONTENT_DIR_PATH)
+    y_testing = load_images(TESTING_STYLE_DIR_PATH)
+    return ((x_training, y_training), (x_testing, y_testing))
+
+def get_data_set():
+    data_set = load_data()
+    return preprocess_data_set(data_set)
+
 #=============================<Helper Fuctions>=================================
 
-def preprocess_data(raw_data):
-    pass
+def preprocess_data_set(data_set):
+    (
+        (x_training, y_training),
+        (x_testing, y_testing)
+    ) = data_set
+    image_dimensions = (CONTENT_IMG_H, CONTENT_IMG_W)
+    x_training = preprocess_data((x_training, image_dimensions))
+    y_training = preprocess_data((y_training, image_dimensions))
+    x_testing = preprocess_data((x_testing, image_dimensions))
+    y_testing = preprocess_data((y_testing, image_dimensions))
+    return ((x_training, y_training), (x_testing, y_testing))
+
+def preprocess_data(data, dimensions):
+    return [ preprocess_image(image, dimensions) for image in data ]
+
+def preprocess_image(image, dimensions):
+    img = image
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        img_temp = img.resize(dimensions)
+        img = np.array(img_temp)
+    img = img.astype("float64")
+    img = np.expand_dims(img, axis=0)
+    return img
 
 def train():
     pass
@@ -62,7 +104,8 @@ def evaluate(model, style):
 
 
 def main():
-    images = load_images("./data_set/training/content")
+    data = get_data_set()
+    images = load_images(f"{DATA_SET_DIR_PATH}/training/content")
     style = load_img("./data_set/training/style/style1", target_size=(CONTENT_IMG_W, CONTENT_IMG_H))
     model = Encoder()
     for image in images:
