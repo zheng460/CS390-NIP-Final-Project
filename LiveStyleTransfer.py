@@ -35,6 +35,9 @@ class Encoder(object):
     def grad(self):
         #calculate the gradient
         pass
+    def run(self,model):
+        #encode the information
+        pass
 
 #=============================<Helper Fuctions>=================================
 #load images
@@ -42,32 +45,35 @@ def load_images(dir):
     files = os.listdir(dir)
     list_of_images = []
     for filename in files:
-        cImg = load_img(filename, target_size=(CONTENT_IMG_W, CONTENT_IMG_H))
-        list_of_images.append(cImg)
+        print(dir + '/'+filename)
+        cImg = load_img(dir + '/'+filename, target_size=(CONTENT_IMG_W, CONTENT_IMG_H))
+        list_of_images.append(img_to_array(cImg))
         print("load image",filename)
+    return  list_of_images
 #=============================<Helper Fuctions>=================================
 
 def preprocess_data(raw_data):
     pass
 
 def train():
+    #different layers
     pass
 
-def evaluate(model, style):
+def evaluate(model):
     test_images = load_images("./data_set/testing/content")
     for img in test_images:
-        result = model.run(img,style)
-        im = Image.fromarray(result)
-        im.save("./results/result.jpg")
+        result = model.run(img)
+        #im = Image.fromarray(result)
+        #im.save("./results/result.jpg")
 
 
 def main():
     images = load_images("./data_set/training/content")
-    style = load_img("./data_set/training/style/style1", target_size=(CONTENT_IMG_W, CONTENT_IMG_H))
+    style = load_img("./data_set/training/sytle/style.jpg", target_size=(CONTENT_IMG_W, CONTENT_IMG_H))
     model = Encoder()
     for image in images:
         model.train(image,style)
-    evaluate(model, style)
+    evaluate(model)
 
 
 if __name__ == "__main__":
