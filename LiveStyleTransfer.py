@@ -13,7 +13,7 @@ from scipy.optimize import fmin_l_bfgs_b
 import time
 import warnings
 
-
+# image sizes
 CONTENT_IMG_H = 500
 CONTENT_IMG_W = 500
 
