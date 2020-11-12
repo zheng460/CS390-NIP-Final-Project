@@ -45,26 +45,36 @@ def load_images(dir):
     files = os.listdir(dir)
     list_of_images = []
     for filename in files:
-        print(dir + '/'+filename)
-        cImg = load_img(dir + '/'+filename, target_size=(CONTENT_IMG_W, CONTENT_IMG_H))
-        list_of_images.append(img_to_array(cImg))
+        cImg = load_img(filename, target_size=(CONTENT_IMG_W, CONTENT_IMG_H))
+        list_of_images.append(cImg)
         print("load image",filename)
-    return  list_of_images
+        return list_of_images
+
+def load_data():
+    x_training = load_images(TRAINING_CONTENT_DIR_PATH)
+    y_training = load_images(TRAINING_STYLE_DIR_PATH)
+    x_testing = load_images(TESTING_CONTENT_DIR_PATH)
+    y_testing = load_images(TESTING_STYLE_DIR_PATH)
+    return ((x_training, y_training), (x_testing, y_testing))
+
+def get_data_set():
+    data_set = load_data()
+    return preprocess_data_set(data_set)
+
 #=============================<Helper Fuctions>=================================
 
 def preprocess_data(raw_data):
     pass
 
 def train():
-    #different layers
     pass
 
-def evaluate(model):
+def evaluate(model, style):
     test_images = load_images("./data_set/testing/content")
     for img in test_images:
-        result = model.run(img)
-        #im = Image.fromarray(result)
-        #im.save("./results/result.jpg")
+        result = model.run(img,style)
+        im = Image.fromarray(result)
+        im.save("./results/result.jpg")
 
 
 def main():
