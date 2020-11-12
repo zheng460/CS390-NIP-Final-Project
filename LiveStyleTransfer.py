@@ -2,16 +2,18 @@ import os
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
-from keras import backend as K
+from tensorflow.keras import backend as K
 import random
 from PIL import Image
-from skimage import transform,io
-from scipy.optimize import fmin_l_bfgs_b   # https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.fmin_l_bfgs_b.html
+from scipy.optimize import (
+    fmin_l_bfgs_b,
+)  # https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.fmin_l_bfgs_b.html
 from tensorflow.keras.applications import vgg19
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from scipy.optimize import fmin_l_bfgs_b
 import time
 import warnings
+
 DATA_SET_DIR_PATH = "./data_set"
 TRAINING_DATA_DIR_PATH = f"{DATA_SET_DIR_PATH}/training"
 TRAINING_CONTENT_DIR_PATH = f"{TRAINING_DATA_DIR_PATH}/content"
@@ -26,32 +28,33 @@ CONTENT_IMG_W = 500
 STYLE_IMG_H = 500
 STYLE_IMG_W = 500
 
+
 class Encoder(object):
     def __init__(self):
-        #initilize the data
+        # initilize the data
         pass
 
-    def train(self,content_image,style_image):
-        #train the encoder based on the images
+    def train(self, content_image, style_image):
+        # train the encoder based on the images
         pass
 
     def loss(self):
-        #loss fucntion
-        pass
-    def grad(self):
-        #calculate the gradient
-        pass
-    def run(self,model):
-        #encode the information
+        # loss fucntion
         pass
 
-#=============================<Helper Fuctions>=================================
-#load images
+    def grad(self):
+        # calculate the gradient
+        pass
+
+    def run(self, model):
+        # encode the information
+        pass
+
+
+# =============================<Helper Fuctions>=================================
+# load images
 def preprocess_data_set(data_set):
-    (
-        (x_training, y_training),
-        (x_testing, y_testing)
-    ) = data_set
+    ((x_training, y_training), (x_testing, y_testing)) = data_set
     image_dimensions = (CONTENT_IMG_H, CONTENT_IMG_W)
     x_training = preprocess_data((x_training, image_dimensions))
     y_training = preprocess_data((y_training, image_dimensions))
@@ -59,8 +62,10 @@ def preprocess_data_set(data_set):
     y_testing = preprocess_data((y_testing, image_dimensions))
     return ((x_training, y_training), (x_testing, y_testing))
 
+
 def preprocess_data(data, dimensions):
-    return [ preprocess_image(image, dimensions) for image in data ]
+    return [preprocess_image(image, dimensions) for image in data]
+
 
 def preprocess_image(image, dimensions):
     img = image
@@ -72,14 +77,18 @@ def preprocess_image(image, dimensions):
     img = np.expand_dims(img, axis=0)
     return img
 
+
 def load_images(dir):
     files = os.listdir(dir)
     list_of_images = []
     for filename in files:
-        cImg = load_img(dir+'/'+filename, target_size=(CONTENT_IMG_W, CONTENT_IMG_H))
+        cImg = load_img(
+            f"{dir}/{filename}", target_size=(CONTENT_IMG_W, CONTENT_IMG_H)
+        )
         list_of_images.append(cImg)
-        print("load image",filename)
+        print("load image", filename)
         return list_of_images
+
 
 def load_data():
     x_training = load_images(TRAINING_CONTENT_DIR_PATH)
@@ -88,32 +97,40 @@ def load_data():
     y_testing = load_images(TESTING_STYLE_DIR_PATH)
     return ((x_training, y_training), (x_testing, y_testing))
 
+
 def get_data_set():
     data_set = load_data()
     return preprocess_data_set(data_set)
 
-#=============================<Helper Fuctions>=================================
+
+# =============================<Helper Fuctions>=================================
+
 
 def preprocess_data(raw_data):
     pass
 
+
 def train():
     pass
+
 
 def evaluate(model):
     test_images = load_images("./data_set/testing/content")
     for img in test_images:
         result = model.run(img)
-        #im = Image.fromarray(result)
-        #im.save("./results/result.jpg")
+        # im = Image.fromarray(result)
+        # im.save("./results/result.jpg")
 
 
 def main():
     images = load_images("./data_set/training/content")
-    style = load_img("./data_set/training/sytle/style.jpg", target_size=(CONTENT_IMG_W, CONTENT_IMG_H))
+    style = load_img(
+        "./data_set/training/sytle/style.jpg",
+        target_size=(CONTENT_IMG_W, CONTENT_IMG_H),
+    )
     model = Encoder()
     for image in images:
-        model.train(image,style)
+        model.train(image, style)
     evaluate(model)
 
 
