@@ -12,7 +12,13 @@ from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from scipy.optimize import fmin_l_bfgs_b
 import time
 import warnings
-
+DATA_SET_DIR_PATH = "./data_set"
+TRAINING_DATA_DIR_PATH = f"{DATA_SET_DIR_PATH}/training"
+TRAINING_CONTENT_DIR_PATH = f"{TRAINING_DATA_DIR_PATH}/content"
+TRAINING_STYLE_DIR_PATH = f"{TRAINING_DATA_DIR_PATH}/style"
+TESTING_DATA_DIR_PATH = f"{DATA_SET_DIR_PATH}/testing"
+TESTING_CONTENT_DIR_PATH = f"{TESTING_DATA_DIR_PATH}/content"
+TESTING_STYLE_DIR_PATH = f"{TESTING_DATA_DIR_PATH}/style"
 # image sizes
 CONTENT_IMG_H = 500
 CONTENT_IMG_W = 500
@@ -41,11 +47,36 @@ class Encoder(object):
 
 #=============================<Helper Fuctions>=================================
 #load images
+def preprocess_data_set(data_set):
+    (
+        (x_training, y_training),
+        (x_testing, y_testing)
+    ) = data_set
+    image_dimensions = (CONTENT_IMG_H, CONTENT_IMG_W)
+    x_training = preprocess_data((x_training, image_dimensions))
+    y_training = preprocess_data((y_training, image_dimensions))
+    x_testing = preprocess_data((x_testing, image_dimensions))
+    y_testing = preprocess_data((y_testing, image_dimensions))
+    return ((x_training, y_training), (x_testing, y_testing))
+
+def preprocess_data(data, dimensions):
+    return [ preprocess_image(image, dimensions) for image in data ]
+
+def preprocess_image(image, dimensions):
+    img = image
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        img_temp = img.resize(dimensions)
+        img = np.array(img_temp)
+    img = img.astype("float64")
+    img = np.expand_dims(img, axis=0)
+    return img
+
 def load_images(dir):
     files = os.listdir(dir)
     list_of_images = []
     for filename in files:
-        cImg = load_img(filename, target_size=(CONTENT_IMG_W, CONTENT_IMG_H))
+        cImg = load_img(dir+'/'+filename, target_size=(CONTENT_IMG_W, CONTENT_IMG_H))
         list_of_images.append(cImg)
         print("load image",filename)
         return list_of_images
@@ -69,12 +100,12 @@ def preprocess_data(raw_data):
 def train():
     pass
 
-def evaluate(model, style):
+def evaluate(model):
     test_images = load_images("./data_set/testing/content")
     for img in test_images:
-        result = model.run(img,style)
-        im = Image.fromarray(result)
-        im.save("./results/result.jpg")
+        result = model.run(img)
+        #im = Image.fromarray(result)
+        #im.save("./results/result.jpg")
 
 
 def main():
