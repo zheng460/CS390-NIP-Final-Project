@@ -71,6 +71,7 @@ def preprocess_image(image: Image.Image, dimensions):
     img = image
     img = np.array(img.resize(dimensions))
     img = img.astype("float64")
+    img = img / 255.0
     return img
 
 
@@ -118,13 +119,22 @@ def main():
     images = get_data_set()
 
     model = keras.Sequential()
-    model.add(keras.layers.Conv2D(64, (3, 3), input_shape=(CONTENT_IMG_H, CONTENT_IMG_W, 3)))
-    model.add(keras.layers.Conv2D(128, (2, 2)))
-    model.add(keras.layers.Conv2DTranspose(128, (2, 2)))
-    model.add(keras.layers.Conv2DTranspose(64, (3, 3)))
-    model.add(keras.layers.Conv2DTranspose(3, (4, 4), padding='same'))
+    model.add(keras.layers.Conv2D(32, (3, 3), activation='relu', input_shape=(CONTENT_IMG_H, CONTENT_IMG_W, 3)))
+    model.add(keras.layers.BatchNormalization())
+    model.add(keras.layers.MaxPooling2D())
+    model.add(keras.layers.BatchNormalization())
+    model.add(keras.layers.Conv2D(64, (2, 2), activation='relu'))
+    model.add(keras.layers.BatchNormalization())
+    model.add(keras.layers.Conv2DTranspose(64, (2, 2), activation='relu'))
+    model.add(keras.layers.BatchNormalization())
+    model.add(keras.layers.UpSampling2D())
+    model.add(keras.layers.BatchNormalization())
+    model.add(keras.layers.Conv2DTranspose(32, (3, 3), activation='relu'))
+    model.add(keras.layers.BatchNormalization())
+    model.add(keras.layers.Conv2DTranspose(3, (4, 4), padding='same', activation='sigmoid'))
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-    model.fit(x=images[0][0], y=images[0][1], epochs=10)
+    model.summary()
+    model.fit(x=images[0][0], y=images[0][1], epochs=10, batch_size=15)
     model.evaluate(x=images[1][0], y=images[1][1])
 
     # style = load_img(
