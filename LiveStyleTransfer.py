@@ -56,25 +56,21 @@ class Encoder(object):
 def preprocess_data_set(data_set):
     ((x_training, y_training), (x_testing, y_testing)) = data_set
     image_dimensions = (CONTENT_IMG_H, CONTENT_IMG_W)
-    x_training = preprocess_data((x_training, image_dimensions))
-    y_training = preprocess_data((y_training, image_dimensions))
-    x_testing = preprocess_data((x_testing, image_dimensions))
-    y_testing = preprocess_data((y_testing, image_dimensions))
+    x_training = preprocess_data(x_training, image_dimensions)
+    y_training = preprocess_data(y_training, image_dimensions)
+    x_testing = preprocess_data(x_testing, image_dimensions)
+    y_testing = preprocess_data(y_testing, image_dimensions)
     return ((x_training, y_training), (x_testing, y_testing))
 
 
 def preprocess_data(data, dimensions):
-    return [preprocess_image(image, dimensions) for image in data]
+    return np.array([preprocess_image(image, dimensions) for image in data])
 
 
-def preprocess_image(image, dimensions):
+def preprocess_image(image: Image.Image, dimensions):
     img = image
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        img_temp = img.resize(dimensions)
-        img = np.array(img_temp)
+    img = np.array(img.resize(dimensions))
     img = img.astype("float64")
-    img = np.expand_dims(img, axis=0)
     return img
 
 
@@ -83,11 +79,10 @@ def load_images(dir):
     list_of_images = []
     for filename in files:
         cImg = load_img(
-            f"{dir}/{filename}", target_size=(CONTENT_IMG_W, CONTENT_IMG_H)
+            f"{dir}/{filename}"
         )
         list_of_images.append(cImg)
-        print("load image", filename)
-        return list_of_images
+    return list_of_images
 
 
 def load_data():
@@ -106,10 +101,6 @@ def get_data_set():
 # =============================<Helper Fuctions>=================================
 
 
-def preprocess_data(raw_data):
-    pass
-
-
 def train():
     pass
 
@@ -123,15 +114,27 @@ def evaluate(model):
 
 
 def main():
-    images = load_images("./data_set/training/content")
-    style = load_img(
-        "./data_set/training/sytle/style.jpg",
-        target_size=(CONTENT_IMG_W, CONTENT_IMG_H),
-    )
-    model = Encoder()
-    for image in images:
-        model.train(image, style)
-    evaluate(model)
+    # images = load_images("./data_set/training/content")
+    images = get_data_set()
+
+    model = keras.Sequential()
+    model.add(keras.layers.Conv2D(64, (3, 3), input_shape=(CONTENT_IMG_H, CONTENT_IMG_W, 3)))
+    model.add(keras.layers.Conv2D(128, (2, 2)))
+    model.add(keras.layers.Conv2DTranspose(128, (2, 2)))
+    model.add(keras.layers.Conv2DTranspose(64, (3, 3)))
+    model.add(keras.layers.Conv2DTranspose(3, (4, 4), padding='same'))
+    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+    model.fit(x=images[0][0], y=images[0][1], epochs=10)
+    model.evaluate(x=images[1][0], y=images[1][1])
+
+    # style = load_img(
+    #     "./data_set/training/style/style.jpg",
+    #     target_size=(CONTENT_IMG_W, CONTENT_IMG_H),
+    # )
+    # model = Encoder()
+    # for image in images:
+    #     model.train(image, style)
+    # evaluate(model)
 
 
 if __name__ == "__main__":
