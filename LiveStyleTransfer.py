@@ -28,6 +28,7 @@ CONTENT_IMG_W = 500
 STYLE_IMG_H = 500
 STYLE_IMG_W = 500
 
+tf.random.set_seed(1492)
 
 class Encoder(object):
     def __init__(self):
@@ -133,9 +134,13 @@ def main():
     model.add(keras.layers.BatchNormalization())
     model.add(keras.layers.Conv2DTranspose(3, (4, 4), padding='same', activation='sigmoid'))
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-    model.summary()
     model.fit(x=images[0][0], y=images[0][1], epochs=10, batch_size=15)
     model.evaluate(x=images[1][0], y=images[1][1])
+
+    prediction = model.predict(images[1][0])[0]
+    prediction = np.round(prediction * 255.0).astype('int8')
+    img = Image.fromarray(prediction, mode='RGB')
+    img.save(f'{DATA_SET_DIR_PATH}/test_image.jpg')
 
     # style = load_img(
     #     "./data_set/training/style/style.jpg",
