@@ -15,8 +15,8 @@ import time
 import warnings
 import math
 
-physical_devices = tf.config.list_physical_devices('GPU')
-tf.config.experimental.set_memory_growth(physical_devices[0], True)
+# physical_devices = tf.config.list_physical_devices('GPU')
+# tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 DATA_SET_DIR_PATH = "./data_set"
 TRAINING_DATA_DIR_PATH = f"{DATA_SET_DIR_PATH}/training"
@@ -122,23 +122,35 @@ def evaluate(model):
 def main():
     # images = load_images("./data_set/training/content")
     images = get_data_set()
+    print(images[1][0][0].shape)
 
     model = keras.Sequential()
-    model.add(keras.layers.Conv2D(64, (2, 2), strides=(2, 2), activation='relu', input_shape=(CONTENT_IMG_H, CONTENT_IMG_W, 3)))
+    model.add(keras.layers.Conv2D(64, (4, 4), strides=(2, 2), activation='relu', input_shape=(CONTENT_IMG_H, CONTENT_IMG_W, 3)))
     model.add(keras.layers.BatchNormalization())
-    model.add(keras.layers.Conv2D(128, (2, 2), activation='relu'))
+    model.add(keras.layers.Conv2D(128, (3, 3), strides=(2, 2), activation='relu'))
     model.add(keras.layers.BatchNormalization())
+    model.add(keras.layers.Conv2D(256, (3, 3), strides=(2, 2), activation='relu'))
+    model.add(keras.layers.BatchNormalization())
+    model.add(keras.layers.Conv2D(512, (2, 2), strides=(2, 2), activation='relu'))
+    model.add(keras.layers.BatchNormalization())
+
     model.add(keras.layers.Flatten())
-    model.add(keras.layers.Dense(4096))
-    model.add(keras.layers.Reshape(math.sqrt(4096), math.sqrt(4096)))
-    model.add(keras.layers.Conv2DTranspose(128, (2, 2), activation='relu'))
+    model.add(keras.layers.Dense(40 * 40 * 1))
     model.add(keras.layers.BatchNormalization())
-    model.add(keras.layers.Conv2DTranspose(64, (2, 2), strides=(2, 2), activation='relu'))
+    model.add(keras.layers.Reshape((40, 40, 1)))
+
+    model.add(keras.layers.Conv2DTranspose(512, (2, 2), activation='relu'))
     model.add(keras.layers.BatchNormalization())
-    model.add(keras.layers.Conv2DTranspose(3, (2, 2), activation='sigmoid', padding='same'))
+    model.add(keras.layers.Conv2DTranspose(256, (2, 2), strides=(3, 3), activation='relu'))
+    model.add(keras.layers.BatchNormalization())
+    model.add(keras.layers.Conv2DTranspose(128, (3, 3), activation='relu'))
+    model.add(keras.layers.BatchNormalization())
+    model.add(keras.layers.Conv2DTranspose(64, (4, 4), strides=(2, 2), activation='relu', padding='same'))
+    model.add(keras.layers.BatchNormalization())
+    model.add(keras.layers.Conv2DTranspose(3, (3, 3), activation='sigmoid', padding='same'))
     model.summary()
     model.compile(optimizer='adam', loss='mean_squared_error', metrics=['accuracy'])
-    model.fit(x=images[0][0], y=images[0][1], epochs=25, batch_size=1)
+    model.fit(x=images[0][0], y=images[0][1], epochs=35)
     model.evaluate(x=images[1][0], y=images[1][1])
 
     prediction = model.predict(images[1][0])[0]
