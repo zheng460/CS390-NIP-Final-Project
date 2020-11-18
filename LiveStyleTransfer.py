@@ -13,6 +13,10 @@ from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from scipy.optimize import fmin_l_bfgs_b
 import time
 import warnings
+import math
+
+physical_devices = tf.config.list_physical_devices('GPU')
+tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 DATA_SET_DIR_PATH = "./data_set"
 TRAINING_DATA_DIR_PATH = f"{DATA_SET_DIR_PATH}/training"
@@ -22,11 +26,11 @@ TESTING_DATA_DIR_PATH = f"{DATA_SET_DIR_PATH}/testing"
 TESTING_CONTENT_DIR_PATH = f"{TESTING_DATA_DIR_PATH}/content"
 TESTING_STYLE_DIR_PATH = f"{TESTING_DATA_DIR_PATH}/style"
 # image sizes
-CONTENT_IMG_H = 500
-CONTENT_IMG_W = 500
+CONTENT_IMG_H = 250
+CONTENT_IMG_W = 250
 
-STYLE_IMG_H = 500
-STYLE_IMG_W = 500
+STYLE_IMG_H = 250
+STYLE_IMG_W = 250
 
 tf.random.set_seed(1492)
 
@@ -120,27 +124,32 @@ def main():
     images = get_data_set()
 
     model = keras.Sequential()
-    model.add(keras.layers.Conv2D(32, (3, 3), activation='relu', input_shape=(CONTENT_IMG_H, CONTENT_IMG_W, 3)))
+    model.add(keras.layers.Conv2D(64, (2, 2), strides=(2, 2), activation='relu', input_shape=(CONTENT_IMG_H, CONTENT_IMG_W, 3)))
     model.add(keras.layers.BatchNormalization())
-    model.add(keras.layers.MaxPooling2D())
+    model.add(keras.layers.Conv2D(128, (2, 2), activation='relu'))
     model.add(keras.layers.BatchNormalization())
-    model.add(keras.layers.Conv2D(64, (2, 2), activation='relu'))
+    model.add(keras.layers.Flatten())
+    model.add(keras.layers.Dense(4096))
+    model.add(keras.layers.Reshape(math.sqrt(4096), math.sqrt(4096)))
+    model.add(keras.layers.Conv2DTranspose(128, (2, 2), activation='relu'))
     model.add(keras.layers.BatchNormalization())
-    model.add(keras.layers.Conv2DTranspose(64, (2, 2), activation='relu'))
+    model.add(keras.layers.Conv2DTranspose(64, (2, 2), strides=(2, 2), activation='relu'))
     model.add(keras.layers.BatchNormalization())
-    model.add(keras.layers.UpSampling2D())
-    model.add(keras.layers.BatchNormalization())
-    model.add(keras.layers.Conv2DTranspose(32, (3, 3), activation='relu'))
-    model.add(keras.layers.BatchNormalization())
-    model.add(keras.layers.Conv2DTranspose(3, (4, 4), padding='same', activation='sigmoid'))
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-    model.fit(x=images[0][0], y=images[0][1], epochs=10, batch_size=15)
+    model.add(keras.layers.Conv2DTranspose(3, (2, 2), activation='sigmoid', padding='same'))
+    model.summary()
+    model.compile(optimizer='adam', loss='mean_squared_error', metrics=['accuracy'])
+    model.fit(x=images[0][0], y=images[0][1], epochs=25, batch_size=1)
     model.evaluate(x=images[1][0], y=images[1][1])
 
     prediction = model.predict(images[1][0])[0]
     prediction = np.round(prediction * 255.0).astype('int8')
     img = Image.fromarray(prediction, mode='RGB')
-    img.save(f'{DATA_SET_DIR_PATH}/test_image.jpg')
+    img.save(f'{DATA_SET_DIR_PATH}/predicted.jpg')
+
+    prediction = images[1][1][0]
+    prediction = np.round(prediction * 255.0).astype('int8')
+    img = Image.fromarray(prediction, mode='RGB')
+    img.save(f'{DATA_SET_DIR_PATH}/expected.jpg')
 
     # style = load_img(
     #     "./data_set/training/style/style.jpg",
