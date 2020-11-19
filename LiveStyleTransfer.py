@@ -118,15 +118,35 @@ def main():
     images = get_data_set()
 
     model = keras.Sequential()
-    model.add(keras.layers.Conv2D(64, (3, 3), input_shape=(CONTENT_IMG_H, CONTENT_IMG_W, 3)))
-    model.add(keras.layers.Conv2D(128, (2, 2)))
-    model.add(keras.layers.Conv2DTranspose(128, (2, 2)))
-    model.add(keras.layers.Conv2DTranspose(64, (3, 3)))
-    model.add(keras.layers.Conv2DTranspose(3, (4, 4), padding='same'))
+    model.add(keras.Input(shape=(CONTENT_IMG_H, CONTENT_IMG_W, 3)))
+    model.add(keras.layers.Conv2D(32, (3,3), activation="relu", strides=2, padding="same"))
+    model.add(keras.layers.Conv2D(64, (2,2), activation="relu", strides=2, padding="same"))
+    model.add(keras.layers.Conv2D(64, (2, 2), activation="relu", strides=2, padding="same"))
+    model.add(keras.layers.Flatten())
+    model.add(keras.layers.Dense(16,activation="relu"))
+    model.add(keras.layers.Dense(125*125*64,activation="relu"))
+    model.add(keras.layers.Reshape((125,125,64)))
+    model.add(keras.layers.Conv2DTranspose(64, (2,2), activation="relu", strides=2, padding="same"))
+    model.add(keras.layers.Conv2DTranspose(32, (3,3), activation="relu", strides=2, padding="same"))
+    model.add(keras.layers.Conv2DTranspose(3,3, activation="sigmoid", padding="same"))
+    #model.add(keras.layers.Dense(16, activation="relu"))
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-    model.fit(x=images[0][0], y=images[0][1], epochs=10)
-    model.evaluate(x=images[1][0], y=images[1][1])
-
+    model.summary()
+    for i in range(100):
+        model.fit(x=images[0][0], y=images[0][1],batch_size= 3,epochs=5)
+        timage = load_img("./data_set/testing/content/content0.jpg")
+        result = preprocess_image(timage,(CONTENT_IMG_H, CONTENT_IMG_W))
+        result = timage
+        result = np.array(result)
+        result= result.astype("float64")
+        result = result.reshape(1,500,500,3)
+        rimg = model.predict(result)[0]
+        print(rimg)
+        rimg = rimg.astype('int8')
+        rimg = rimg*255
+        print(rimg)
+        im = Image.fromarray(rimg,mode = 'RGB')
+        im.save(f"result{i}.jpg")
     # style = load_img(
     #     "./data_set/training/style/style.jpg",
     #     target_size=(CONTENT_IMG_W, CONTENT_IMG_H),
