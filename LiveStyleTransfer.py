@@ -18,7 +18,7 @@ import math
 # physical_devices = tf.config.list_physical_devices('GPU')
 # tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
-DATA_SET_DIR_PATH = "./data_set"
+DATA_SET_DIR_PATH = "/homes/rose142/cs390/CS390-NIP-Final-Project/data_set"
 TRAINING_DATA_DIR_PATH = f"{DATA_SET_DIR_PATH}/training"
 TRAINING_CONTENT_DIR_PATH = f"{TRAINING_DATA_DIR_PATH}/content"
 TRAINING_STYLE_DIR_PATH = f"{TRAINING_DATA_DIR_PATH}/style"
@@ -107,8 +107,66 @@ def get_data_set():
 # =============================<Helper Functions>=================================
 
 
-def train():
-    pass
+def build_unet():
+    inputs = keras.Input(shape=(CONTENT_IMG_H, CONTENT_IMG_W, 3))
+
+    conv1 = keras.layers.Conv2D(128, (2, 2), strides=(2, 2))(inputs)
+    leaky1 = keras.layers.LeakyReLU()(conv1)
+    batch1 = keras.layers.BatchNormalization()(leaky1)
+    conv2 = keras.layers.Conv2D(128, (2, 2), strides=(2, 2))(batch1)
+    leaky2 = keras.layers.LeakyReLU()(conv2)
+    batch2 = keras.layers.BatchNormalization()(leaky2)
+    conv3 = keras.layers.Conv2D(128, (4, 4), strides=(2, 2))(batch2)
+    leaky3 = keras.layers.LeakyReLU()(conv3)
+    batch3 = keras.layers.BatchNormalization()(leaky3)
+    conv4 = keras.layers.Conv2D(128, (4, 4), strides=(2, 2))(batch3)
+    leaky4 = keras.layers.LeakyReLU()(conv4)
+    batch4 = keras.layers.BatchNormalization()(leaky4)
+    conv5 = keras.layers.Conv2D(128, (4, 4), strides=(2, 2))(batch4)
+    leaky5 = keras.layers.LeakyReLU()(conv5)
+    batch5 = keras.layers.BatchNormalization()(leaky5)
+
+    flat = keras.layers.Flatten()(batch5)
+    dense = keras.layers.Dense(4608)(flat)
+    leaky_dense = keras.layers.LeakyReLU()(dense)
+    batch_dense = keras.layers.BatchNormalization()(leaky_dense)
+    reshape = keras.layers.Reshape((6, 6, 128))(batch_dense)
+
+    merge1 = keras.layers.concatenate([reshape, batch5])
+    conv_t1 = keras.layers.Conv2DTranspose(128, (4, 4), strides=(2, 2))(merge1)
+    leaky_t1 = keras.layers.LeakyReLU()(conv_t1)
+    batch_t1 = keras.layers.BatchNormalization()(leaky_t1)
+
+    merge2 = keras.layers.concatenate([batch_t1, batch4])
+    conv_t2 = keras.layers.Conv2DTranspose(128, (4, 4), strides=(2, 2))(merge2)
+    leaky_t2 = keras.layers.LeakyReLU()(conv_t2)
+    batch_t2 = keras.layers.BatchNormalization()(leaky_t2)
+
+    merge3 = keras.layers.concatenate([batch_t2, batch3])
+    conv_t3 = keras.layers.Conv2DTranspose(128, (4, 4), strides=(2, 2))(merge3)
+    leaky_t3 = keras.layers.LeakyReLU()(conv_t3)
+    batch_t3 = keras.layers.BatchNormalization()(leaky_t3)
+
+    merge4 = keras.layers.concatenate([batch_t3, batch2])
+    conv_t4 = keras.layers.Conv2DTranspose(128, (2, 2), strides=(2, 2))(merge4)
+    leaky_t4 = keras.layers.LeakyReLU()(conv_t4)
+    batch_t4 = keras.layers.BatchNormalization()(leaky_t4)
+
+    conv_t5 = keras.layers.Conv2DTranspose(128, (2, 2))(batch_t4)
+    leaky_t5 = keras.layers.LeakyReLU()(conv_t5)
+    batch_t5 = keras.layers.BatchNormalization()(leaky_t5)
+
+    merge5 = keras.layers.concatenate([batch_t5, batch1])
+    conv_t6 = keras.layers.Conv2DTranspose(128, (2, 2), strides=(2, 2))(merge5)
+    leaky_t6 = keras.layers.LeakyReLU()(conv_t6)
+    batch_t6 = keras.layers.BatchNormalization()(leaky_t6)
+
+    outputs = keras.layers.Conv2DTranspose(3, (2, 2), activation='sigmoid', padding='same')(batch_t6)
+
+    model = keras.Model(inputs=inputs, outputs=outputs, name='LiveStyleTransfer-UNet')
+    model.summary()
+    model.compile(optimizer='adam', loss='mean_squared_error')
+    return model
 
 
 def evaluate(model):
@@ -123,34 +181,9 @@ def main():
     # images = load_images("./data_set/training/content")
     images = get_data_set()
     print(images[1][0][0].shape)
+    model = build_unet()
 
-    model = keras.Sequential()
-    model.add(keras.layers.Conv2D(64, (4, 4), strides=(2, 2), activation='relu', input_shape=(CONTENT_IMG_H, CONTENT_IMG_W, 3)))
-    model.add(keras.layers.BatchNormalization())
-    model.add(keras.layers.Conv2D(128, (3, 3), strides=(2, 2), activation='relu'))
-    model.add(keras.layers.BatchNormalization())
-    model.add(keras.layers.Conv2D(256, (3, 3), strides=(2, 2), activation='relu'))
-    model.add(keras.layers.BatchNormalization())
-    model.add(keras.layers.Conv2D(512, (2, 2), strides=(2, 2), activation='relu'))
-    model.add(keras.layers.BatchNormalization())
-
-    model.add(keras.layers.Flatten())
-    model.add(keras.layers.Dense(40 * 40 * 1))
-    model.add(keras.layers.BatchNormalization())
-    model.add(keras.layers.Reshape((40, 40, 1)))
-
-    model.add(keras.layers.Conv2DTranspose(512, (2, 2), activation='relu'))
-    model.add(keras.layers.BatchNormalization())
-    model.add(keras.layers.Conv2DTranspose(256, (2, 2), strides=(3, 3), activation='relu'))
-    model.add(keras.layers.BatchNormalization())
-    model.add(keras.layers.Conv2DTranspose(128, (3, 3), activation='relu'))
-    model.add(keras.layers.BatchNormalization())
-    model.add(keras.layers.Conv2DTranspose(64, (4, 4), strides=(2, 2), activation='relu', padding='same'))
-    model.add(keras.layers.BatchNormalization())
-    model.add(keras.layers.Conv2DTranspose(3, (3, 3), activation='sigmoid', padding='same'))
-    model.summary()
-    model.compile(optimizer='adam', loss='mean_squared_error', metrics=['accuracy'])
-    model.fit(x=images[0][0], y=images[0][1], epochs=35)
+    model.fit(x=images[0][0], y=images[0][1], epochs=25)
     model.evaluate(x=images[1][0], y=images[1][1])
 
     prediction = model.predict(images[1][0])[0]
