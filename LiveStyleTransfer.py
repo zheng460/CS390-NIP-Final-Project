@@ -80,22 +80,22 @@ def preprocess_image(image: Image.Image, dimensions):
     return img
 
 
-def load_images(dir):
+def load_images(dir, filename):
     files = os.listdir(dir)
     list_of_images = []
-    for filename in files:
+    for i in range(len(files)):
         cImg = load_img(
-            f"{dir}/{filename}"
+            f"{dir}/{filename}{i}.jpg"
         )
         list_of_images.append(cImg)
     return list_of_images
 
 
 def load_data():
-    x_training = load_images(TRAINING_CONTENT_DIR_PATH)
-    y_training = load_images(TRAINING_STYLE_DIR_PATH)
-    x_testing = load_images(TESTING_CONTENT_DIR_PATH)
-    y_testing = load_images(TESTING_STYLE_DIR_PATH)
+    x_training = load_images(TRAINING_CONTENT_DIR_PATH, 'content')
+    y_training = load_images(TRAINING_STYLE_DIR_PATH, 'style')
+    x_testing = load_images(TESTING_CONTENT_DIR_PATH, 'content')
+    y_testing = load_images(TESTING_STYLE_DIR_PATH, 'style')
     return ((x_training, y_training), (x_testing, y_testing))
 
 
@@ -166,10 +166,12 @@ def build_unet():
     leaky_t6 = keras.layers.LeakyReLU()(conv_t6)
     batch_t6 = keras.layers.BatchNormalization()(leaky_t6)
 
-    merge_output1 = keras.layers.concatenate([batch_t6, inputs])
-    outputs1 = keras.layers.Conv2DTranspose(3, (4, 4), activation='sigmoid', padding='same')(merge_output1)
-    merge_output2 = keras.layers.concatenate([outputs1, inputs])
-    outputs2 = keras.layers.Conv2DTranspose(3, (1, 1), activation='sigmoid', padding='same')(merge_output2)
+    # merge_output1 = keras.layers.concatenate([batch_t6, inputs])
+    outputs1 = keras.layers.Conv2DTranspose(3, (4, 4), padding='same')(batch_t6)
+    leaky_output1 = keras.layers.LeakyReLU()(outputs1)
+    batch_output1 = keras.layers.BatchNormalization()(leaky_output1)
+    merge_output2 = keras.layers.concatenate([batch_output1, inputs])
+    outputs2 = keras.layers.Conv2DTranspose(3, (2, 2), activation='sigmoid', padding='same')(merge_output2)
 
     model = keras.Model(inputs=inputs, outputs=outputs2, name='LiveStyleTransfer-UNet')
     model.summary()
@@ -194,7 +196,7 @@ def main():
     model.fit(x=images[0][0], y=images[0][1], epochs=15)
     model.evaluate(x=images[1][0], y=images[1][1])
 
-    prediction = model.predict(images[1][0])[0]
+    prediction = model.predict(np.array([images[1][0][0]]))[0]
     prediction = np.round(prediction * 255.0).astype('int8')
     img = Image.fromarray(prediction, mode='RGB')
     img.save(f'{DATA_SET_DIR_PATH}/predicted.jpg')
