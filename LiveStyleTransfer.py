@@ -5,6 +5,7 @@ from tensorflow import keras
 from tensorflow.keras import backend as K
 import random
 from PIL import Image
+from PIL import GifImagePlugin
 from scipy.optimize import (
     fmin_l_bfgs_b,
 )  # https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.fmin_l_bfgs_b.html
@@ -188,6 +189,33 @@ def evaluate(model):
         result = model.run(img)
         # im = Image.fromarray(result)
         # im.save("./results/result.jpg")
+def tranfergit(model,filename):
+    print("begin tranfer")
+    if not os.path.exists('./gif'):
+        os.makedirs('./gif')
+    img = Image.open(filename)
+    images = []
+    for frame in range(0,img.n_frames): 
+        print(frame)
+        img.seek(frame)
+        temp = img
+        if temp.mode != 'RGB':
+            temp = temp.convert('RGB') 
+        temp.save(f"./gif/{frame}.jpg")
+        timage = load_img(f"./gif/{frame}.jpg")
+        prediction = preprocess_image(timage,(CONTENT_IMG_H, CONTENT_IMG_W))
+        prediction = model.predict(prediction)[0]
+        
+        prediction += prediction
+        prediction = np.clip(prediction, 0.0, 1.0)
+        prediction = np.round(prediction * 255.0).astype('int8')
+        im = Image.fromarray(prediction, mode='RGB')
+        im.save(f'{DATA_SET_DIR_PATH}/predicted.jpg')
+        #im = timage
+        images.append(im)
+        im.save(f"result{frame}.png")
+    images[0].save(fp="result.gif", format='GIF', append_images=images,
+         save_all=True, duration=200, loop=0)
 
 
 def main():
@@ -198,12 +226,7 @@ def main():
     model.fit(x=data_set[0][0], y=data_set[0][1], epochs=15)
     model.evaluate(x=data_set[1][0], y=data_set[1][1])
 
-    prediction = model.predict(np.array([data_set[1][0][0]]))[0]
-    prediction += data_set[1][0][0]
-    prediction = np.clip(prediction, 0.0, 1.0)
-    prediction = np.round(prediction * 255.0).astype('int8')
-    img = Image.fromarray(prediction, mode='RGB')
-    img.save(f'{DATA_SET_DIR_PATH}/predicted.jpg')
+
 
     prediction = data_set[1][2][0]
     prediction = np.round(prediction * 255.0).astype('int8')
@@ -214,7 +237,7 @@ def main():
     prediction = np.round(prediction * 255.0).astype('int8')
     img = Image.fromarray(prediction, mode='RGB')
     img.save(f'{DATA_SET_DIR_PATH}/original.jpg')
-
+    tranfergit(model,"test.gif")
     # style = load_img(
     #     "./data_set/training/style/style.jpg",
     #     target_size=(CONTENT_IMG_W, CONTENT_IMG_H),
