@@ -64,7 +64,6 @@ def preprocess_image(image: Image.Image, dimensions):
     img = np.expand_dims(img, axis=0)
     img = vgg19.preprocess_input(img)
     img = np.squeeze(img, axis=0)
-    img /= 255.0
     return img
 
 
@@ -192,35 +191,23 @@ S_DATA = np.expand_dims(preprocess_image(load_img(f"{DATA_SET_DIR_PATH}/style_so
 def calculate_loss(expected, predicted):
     expected = tf.cast(expected, tf.float64)
     predicted = tf.cast(predicted, tf.float64)
-    predicted = K.clip(predicted, 0, 255)
+    # predicted = K.clip(predicted, 0, 255)
     wrapper = lab3.Wrapper(expected, S_DATA, predicted)
     return wrapper.constructTotalLoss()
 
 def main():
-    # images = load_images("./data_set/training/content")
     images = get_data_set()
-    print(images[1][0][0].shape)
+    expected = images[1][1][0]
+    save_image(expected, f'{DATA_SET_DIR_PATH}/expected.jpg')
     model = build_unet()
 
-    model.fit(x=images[0][0], y=images[0][1], epochs=20, batch_size=1)
+    model.fit(x=images[0][0], y=images[0][1], epochs=15, batch_size=1)
     model.evaluate(x=images[1][0], y=images[1][1])
 
     prediction = model.predict(np.array([images[1][0][0]]))[0]
     save_image(prediction, f'{DATA_SET_DIR_PATH}/predicted.jpg')
 
-    prediction = images[1][1][0]
-    save_image(prediction, f'{DATA_SET_DIR_PATH}/expected.jpg')
-
-    model.save('model_result')
-
-    # style = load_img(
-    #     "./data_set/training/style/style.jpg",
-    #     target_size=(CONTENT_IMG_W, CONTENT_IMG_H),
-    # )
-    # model = Encoder()
-    # for image in images:
-    #     model.train(image, style)
-    # evaluate(model)
+    model.save('/homes/rose142/scratch/model_result')
 
 
 if __name__ == "__main__":
