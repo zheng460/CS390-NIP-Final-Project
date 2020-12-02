@@ -14,8 +14,12 @@ from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from scipy.optimize import fmin_l_bfgs_b
 import time
 import warnings
+import math
 
-DATA_SET_DIR_PATH = "./data_set"
+# physical_devices = tf.config.list_physical_devices('GPU')
+# tf.config.experimental.set_memory_growth(physical_devices[0], True)
+
+DATA_SET_DIR_PATH = "/homes/rose142/cs390/CS390-NIP-Final-Project/data_set"
 TRAINING_DATA_DIR_PATH = f"{DATA_SET_DIR_PATH}/training"
 TRAINING_CONTENT_DIR_PATH = f"{TRAINING_DATA_DIR_PATH}/content"
 TRAINING_STYLE_DIR_PATH = f"{TRAINING_DATA_DIR_PATH}/style"
@@ -23,16 +27,17 @@ TESTING_DATA_DIR_PATH = f"{DATA_SET_DIR_PATH}/testing"
 TESTING_CONTENT_DIR_PATH = f"{TESTING_DATA_DIR_PATH}/content"
 TESTING_STYLE_DIR_PATH = f"{TESTING_DATA_DIR_PATH}/style"
 # image sizes
-CONTENT_IMG_H = 500
-CONTENT_IMG_W = 500
+CONTENT_IMG_H = 250
+CONTENT_IMG_W = 250
 
-STYLE_IMG_H = 500
-STYLE_IMG_W = 500
+STYLE_IMG_H = 250
+STYLE_IMG_W = 250
 
+tf.random.set_seed(1492)
 
 class Encoder(object):
     def __init__(self):
-        # initilize the data
+        # initialize the data
         pass
 
     def train(self, content_image, style_image):
@@ -40,7 +45,7 @@ class Encoder(object):
         pass
 
     def loss(self):
-        # loss fucntion
+        # loss function
         pass
 
     def grad(self):
@@ -52,16 +57,18 @@ class Encoder(object):
         pass
 
 
-# =============================<Helper Fuctions>=================================
+# =============================<Helper Functions>=================================
 # load images
 def preprocess_data_set(data_set):
     ((x_training, y_training), (x_testing, y_testing)) = data_set
     image_dimensions = (CONTENT_IMG_H, CONTENT_IMG_W)
     x_training = preprocess_data(x_training, image_dimensions)
     y_training = preprocess_data(y_training, image_dimensions)
+    training_expected = y_training - x_training
     x_testing = preprocess_data(x_testing, image_dimensions)
     y_testing = preprocess_data(y_testing, image_dimensions)
-    return ((x_training, y_training), (x_testing, y_testing))
+    testing_expected = y_testing - x_testing
+    return ((x_training, training_expected, y_training), (x_testing, testing_expected, y_testing))
 
 
 def preprocess_data(data, dimensions):
@@ -76,22 +83,22 @@ def preprocess_image(image: Image.Image, dimensions):
     return img
 
 
-def load_images(dir):
+def load_images(dir, filename):
     files = os.listdir(dir)
     list_of_images = []
-    for filename in files:
+    for i in range(len(files)):
         cImg = load_img(
-            f"{dir}/{filename}"
+            f"{dir}/{filename}{i}.jpg"
         )
         list_of_images.append(cImg)
     return list_of_images
 
 
 def load_data():
-    x_training = load_images(TRAINING_CONTENT_DIR_PATH)
-    y_training = load_images(TRAINING_STYLE_DIR_PATH)
-    x_testing = load_images(TESTING_CONTENT_DIR_PATH)
-    y_testing = load_images(TESTING_STYLE_DIR_PATH)
+    x_training = load_images(TRAINING_CONTENT_DIR_PATH, 'content')
+    y_training = load_images(TRAINING_STYLE_DIR_PATH, 'style')
+    x_testing = load_images(TESTING_CONTENT_DIR_PATH, 'content')
+    y_testing = load_images(TESTING_STYLE_DIR_PATH, 'style')
     return ((x_training, y_training), (x_testing, y_testing))
 
 
@@ -100,11 +107,80 @@ def get_data_set():
     return preprocess_data_set(data_set)
 
 
-# =============================<Helper Fuctions>=================================
+# =============================<Helper Functions>=================================
 
 
-def train():
-    pass
+def build_unet():
+    inputs = keras.Input(shape=(CONTENT_IMG_H, CONTENT_IMG_W, 3))
+
+    conv1 = keras.layers.Conv2D(256, (6, 6), strides=(2, 2), padding='same')(inputs)
+    leaky1 = keras.layers.LeakyReLU()(conv1)
+    batch1 = keras.layers.BatchNormalization()(leaky1)
+    conv2 = keras.layers.Conv2D(128, (6, 6))(batch1)
+    leaky2 = keras.layers.LeakyReLU()(conv2)
+    batch2 = keras.layers.BatchNormalization()(leaky2)
+    conv3 = keras.layers.Conv2D(64, (6, 6), strides=(2, 2), padding='same')(batch2)
+    leaky3 = keras.layers.LeakyReLU()(conv3)
+    batch3 = keras.layers.BatchNormalization()(leaky3)
+    # conv4 = keras.layers.Conv2D(64, (4, 4), strides=(2, 2), padding='same')(batch3)
+    # leaky4 = keras.layers.LeakyReLU()(conv4)
+    # batch4 = keras.layers.BatchNormalization()(leaky4)
+    # conv5 = keras.layers.Conv2D(64, (2, 2))(batch4)
+    # leaky5 = keras.layers.LeakyReLU()(conv5)
+    # batch5 = keras.layers.BatchNormalization()(leaky5)
+    # conv6 = keras.layers.Conv2D(64, (4, 4), strides=(2, 2), padding='same')(batch5)
+    # leaky6 = keras.layers.LeakyReLU()(conv6)
+    # batch6 = keras.layers.BatchNormalization()(leaky6)
+
+    flat = keras.layers.Flatten()(batch3)
+    dense1 = keras.layers.Dense(5000)(flat)
+    leaky_dense1 = keras.layers.LeakyReLU()(dense1)
+    batch_dense1 = keras.layers.BatchNormalization()(leaky_dense1)
+    dense2 = keras.layers.Dense(4096)(batch_dense1)
+    leaky_dense2 = keras.layers.LeakyReLU()(dense2)
+    batch_dense2 = keras.layers.BatchNormalization()(leaky_dense2)
+    dense3 = keras.layers.Dense(60 * 60 * 1)(batch_dense2)
+    leaky_dense3 = keras.layers.LeakyReLU()(dense3)
+    batch_dense3 = keras.layers.BatchNormalization()(leaky_dense3)
+    reshape = keras.layers.Reshape((60, 60, 1))(batch_dense3)
+
+    # merge1 = keras.layers.concatenate([reshape, batch6])
+    # conv_t1 = keras.layers.Conv2DTranspose(64, (4, 4), strides=(2, 2), padding='same')(merge1)
+    # leaky_t1 = keras.layers.LeakyReLU()(conv_t1)
+    # batch_t1 = keras.layers.BatchNormalization()(leaky_t1)
+    # merge2 = keras.layers.concatenate([batch_t1, batch5])
+    # conv_t2 = keras.layers.Conv2DTranspose(64, (2, 2))(merge2)
+    # leaky_t2 = keras.layers.LeakyReLU()(conv_t2)
+    # batch_t2 = keras.layers.BatchNormalization()(leaky_t2)
+    # merge3 = keras.layers.concatenate([batch_t2, batch4])
+    # conv_t3 = keras.layers.Conv2DTranspose(64, (4, 4), strides=(2, 2), padding='same')(merge3)
+    # leaky_t3 = keras.layers.LeakyReLU()(conv_t3)
+    # batch_t3 = keras.layers.BatchNormalization()(leaky_t3)
+    # merge4 = keras.layers.concatenate([reshape, batch3])
+    conv_t4 = keras.layers.Conv2DTranspose(64, (6, 6), strides=(2, 2), padding='same')(reshape)
+    leaky_t4 = keras.layers.LeakyReLU()(conv_t4)
+    batch_t4 = keras.layers.BatchNormalization()(leaky_t4)
+    # merge5 = keras.layers.concatenate([batch_t4, batch2])
+    conv_t5 = keras.layers.Conv2DTranspose(128, (6, 6))(batch_t4)
+    leaky_t5 = keras.layers.LeakyReLU()(conv_t5)
+    batch_t5 = keras.layers.BatchNormalization()(leaky_t5)
+    # merge6 = keras.layers.concatenate([batch_t5, batch1])
+    conv_t6 = keras.layers.Conv2DTranspose(256, (6, 6), strides=(2, 2), padding='same')(batch_t5)
+    leaky_t6 = keras.layers.LeakyReLU()(conv_t6)
+    batch_t6 = keras.layers.BatchNormalization()(leaky_t6)
+
+    # merge_output1 = keras.layers.concatenate([batch_t6, inputs])
+    outputs1 = keras.layers.Conv2DTranspose(128, (4, 4), padding='same')(batch_t6)
+    leaky_output1 = keras.layers.LeakyReLU()(outputs1)
+    batch_output1 = keras.layers.BatchNormalization()(leaky_output1)
+
+    # merge_output2 = keras.layers.concatenate([batch_output1, inputs])
+    outputs2 = keras.layers.Conv2DTranspose(3, (2, 2), activation='tanh', padding='same')(batch_output1)
+
+    model = keras.Model(inputs=inputs, outputs=outputs2, name='LiveStyleTransfer-UNet')
+    model.summary()
+    model.compile(optimizer='adam', loss='mean_squared_error')
+    return model
 
 
 def evaluate(model):
@@ -118,8 +194,6 @@ def tranfergit(model,filename):
     if not os.path.exists('./gif'):
         os.makedirs('./gif')
     img = Image.open(filename)
-    print(img.is_animated)
-    print(img.n_frames)
     images = []
     for frame in range(0,img.n_frames): 
         print(frame)
@@ -129,14 +203,14 @@ def tranfergit(model,filename):
             temp = temp.convert('RGB') 
         temp.save(f"./gif/{frame}.jpg")
         timage = load_img(f"./gif/{frame}.jpg")
-        result = preprocess_image(timage,(CONTENT_IMG_H, CONTENT_IMG_W))
-        result = np.array(result)
-        result= result.astype("float64")
-        result = result.reshape(1,500,500,3)
-        rimg = model.predict(result)[0]
-        rimg = rimg*255
-        rimg = rimg.astype('int')
-        im = Image.fromarray(rimg,mode = 'RGB')
+        prediction = preprocess_image(timage,(CONTENT_IMG_H, CONTENT_IMG_W))
+        prediction = model.predict(prediction)[0]
+        
+        prediction += prediction
+        prediction = np.clip(prediction, 0.0, 1.0)
+        prediction = np.round(prediction * 255.0).astype('int8')
+        im = Image.fromarray(prediction, mode='RGB')
+        im.save(f'{DATA_SET_DIR_PATH}/predicted.jpg')
         #im = timage
         images.append(im)
         im.save(f"result{frame}.png")
@@ -146,26 +220,23 @@ def tranfergit(model,filename):
 
 def main():
     # images = load_images("./data_set/training/content")
-    images = get_data_set()
+    data_set = get_data_set()
+    model = build_unet()
 
-    model = keras.Sequential()
-    model.add(keras.layers.Conv2D(32, (3, 3), activation='relu', input_shape=(CONTENT_IMG_H, CONTENT_IMG_W, 3)))
-    model.add(keras.layers.BatchNormalization())
-    model.add(keras.layers.MaxPooling2D())
-    model.add(keras.layers.BatchNormalization())
-    model.add(keras.layers.Conv2D(64, (2, 2), activation='relu'))
-    model.add(keras.layers.BatchNormalization())
-    model.add(keras.layers.Conv2DTranspose(64, (2, 2), activation='relu'))
-    model.add(keras.layers.BatchNormalization())
-    model.add(keras.layers.UpSampling2D())
-    model.add(keras.layers.BatchNormalization())
-    model.add(keras.layers.Conv2DTranspose(32, (3, 3), activation='relu'))
-    model.add(keras.layers.BatchNormalization())
-    model.add(keras.layers.Conv2DTranspose(3, (4, 4), padding='same', activation='sigmoid'))
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-    model.summary()
-    model.fit(x=images[0][0], y=images[0][1], epochs=1, batch_size=15)
-    #model.evaluate(x=images[1][0], y=images[1][1])
+    model.fit(x=data_set[0][0], y=data_set[0][1], epochs=15)
+    model.evaluate(x=data_set[1][0], y=data_set[1][1])
+
+
+
+    prediction = data_set[1][2][0]
+    prediction = np.round(prediction * 255.0).astype('int8')
+    img = Image.fromarray(prediction, mode='RGB')
+    img.save(f'{DATA_SET_DIR_PATH}/expected.jpg')
+
+    prediction = data_set[1][0][0]
+    prediction = np.round(prediction * 255.0).astype('int8')
+    img = Image.fromarray(prediction, mode='RGB')
+    img.save(f'{DATA_SET_DIR_PATH}/original.jpg')
     tranfergit(model,"test.gif")
     # style = load_img(
     #     "./data_set/training/style/style.jpg",
