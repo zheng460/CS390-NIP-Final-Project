@@ -5,6 +5,7 @@ from tensorflow import keras
 from tensorflow.keras import backend as K
 import random
 from PIL import Image
+from PIL import GifImagePlugin
 from scipy.optimize import (
     fmin_l_bfgs_b,
 )  # https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.fmin_l_bfgs_b.html
@@ -27,7 +28,7 @@ CONTENT_IMG_W = 500
 
 STYLE_IMG_H = 500
 STYLE_IMG_W = 500
-os.environ["CUDA_VISIBLE_DEVICES"]="4"
+
 
 class Encoder(object):
     def __init__(self):
@@ -112,6 +113,35 @@ def evaluate(model):
         result = model.run(img)
         # im = Image.fromarray(result)
         # im.save("./results/result.jpg")
+def tranfergit(model,filename):
+    print("begin tranfer")
+    if not os.path.exists('./gif'):
+        os.makedirs('./gif')
+    img = Image.open(filename)
+    print(img.is_animated)
+    print(img.n_frames)
+    images = []
+    for frame in range(0,img.n_frames): 
+        print(frame)
+        img.seek(frame)
+        temp = img
+        if temp.mode != 'RGB':
+            temp = temp.convert('RGB') 
+        temp.save(f"./gif/{frame}.jpg")
+        timage = load_img(f"./gif/{frame}.jpg")
+        result = preprocess_image(timage,(CONTENT_IMG_H, CONTENT_IMG_W))
+        result = np.array(result)
+        result= result.astype("float64")
+        result = result.reshape(1,500,500,3)
+        rimg = model.predict(result)[0]
+        rimg = rimg*255
+        rimg = rimg.astype('int')
+        #im = Image.fromarray(rimg,mode = 'RGB')
+        im = timage
+        images.append(im)
+        im.save(f"result{frame}.png")
+    images[0].save(fp="result.gif", format='GIF', append_images=images,
+         save_all=True, duration=200, loop=0)
 
 
 def main():
@@ -119,37 +149,24 @@ def main():
     images = get_data_set()
 
     model = keras.Sequential()
-    model.add(keras.Input(shape=(CONTENT_IMG_H, CONTENT_IMG_W, 3)))
-    model.add(keras.layers.Conv2D(32, (3,3), activation="relu", strides=(2,2), padding="same"))
-    model.add(keras.layers.Conv2D(64, (2,2), activation="relu", strides=(2,2), padding="same"))
-    model.add(keras.layers.Conv2D(64, (2, 2), activation="relu", strides=(2,2), padding="same"))
-    model.add(keras.layers.Flatten())
-    model.add(keras.layers.Dense(1024,activation="relu"))
-    model.add(keras.layers.Dense(125*125*64,activation="relu"))
-    model.add(keras.layers.Reshape((125,125,64)))
-    model.add(keras.layers.Conv2DTranspose(64, (2,2), activation="relu", strides=(2,2), padding="same"))
-    model.add(keras.layers.Conv2DTranspose(32, (3,3), activation="relu", strides=(2,2), padding="same"))
-    model.add(keras.layers.Conv2DTranspose(3,3, activation="sigmoid", padding="same"))
-    #model.add(keras.layers.Dense(16, activation="relu"))
-    model.compile(optimizer='adam', loss='mean_squared_error', metrics=['accuracy'])
+    model.add(keras.layers.Conv2D(32, (3, 3), activation='relu', input_shape=(CONTENT_IMG_H, CONTENT_IMG_W, 3)))
+    model.add(keras.layers.BatchNormalization())
+    model.add(keras.layers.MaxPooling2D())
+    model.add(keras.layers.BatchNormalization())
+    model.add(keras.layers.Conv2D(64, (2, 2), activation='relu'))
+    model.add(keras.layers.BatchNormalization())
+    model.add(keras.layers.Conv2DTranspose(64, (2, 2), activation='relu'))
+    model.add(keras.layers.BatchNormalization())
+    model.add(keras.layers.UpSampling2D())
+    model.add(keras.layers.BatchNormalization())
+    model.add(keras.layers.Conv2DTranspose(32, (3, 3), activation='relu'))
+    model.add(keras.layers.BatchNormalization())
+    model.add(keras.layers.Conv2DTranspose(3, (4, 4), padding='same', activation='sigmoid'))
+    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
     model.summary()
-    for i in range(100):
-        with tf.device('/gpu:1'):
-            model.fit(x=images[0][0], y=images[0][1],batch_size= 3,epochs=10)
-        timage = load_img("./data_set/testing/content/content0.jpg")
-        result = preprocess_image(timage,(CONTENT_IMG_H, CONTENT_IMG_W))
-        result = timage
-        result = np.array(result)
-        result= result.astype("float64")
-        result = result.reshape(1,500,500,3)
-        rimg = model.predict(result)[0]
-        print(rimg)
-        rimg = rimg*255
-        rimg = rimg.astype('int')
-
-        print(rimg)
-        im = Image.fromarray(rimg,mode = 'RGB')
-        im.save(f"result{i}.jpg")
+    #model.fit(x=images[0][0], y=images[0][1], epochs=1, batch_size=15)
+    #model.evaluate(x=images[1][0], y=images[1][1])
+    tranfergit(model,"test.gif")
     # style = load_img(
     #     "./data_set/training/style/style.jpg",
     #     target_size=(CONTENT_IMG_W, CONTENT_IMG_H),
