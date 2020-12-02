@@ -136,8 +136,8 @@ def tranfergit(model,filename):
         rimg = model.predict(result)[0]
         rimg = rimg*255
         rimg = rimg.astype('int')
-        #im = Image.fromarray(rimg,mode = 'RGB')
-        im = timage
+        im = Image.fromarray(rimg,mode = 'RGB')
+        #im = timage
         images.append(im)
         im.save(f"result{frame}.png")
     images[0].save(fp="result.gif", format='GIF', append_images=images,
@@ -164,7 +164,7 @@ def main():
     model.add(keras.layers.Conv2DTranspose(3, (4, 4), padding='same', activation='sigmoid'))
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
     model.summary()
-    #model.fit(x=images[0][0], y=images[0][1], epochs=1, batch_size=15)
+    model.fit(x=images[0][0], y=images[0][1], epochs=1, batch_size=15)
     #model.evaluate(x=images[1][0], y=images[1][1])
     tranfergit(model,"test.gif")
     # style = load_img(
