@@ -192,6 +192,7 @@ S_DATA = np.expand_dims(preprocess_image(load_img(f"{DATA_SET_DIR_PATH}/style_so
 def calculate_loss(expected, predicted):
     expected = tf.cast(expected, tf.float64)
     predicted = tf.cast(predicted, tf.float64)
+    predicted = K.clip(predicted, 0, 255)
     wrapper = lab3.Wrapper(expected, S_DATA, predicted)
     return wrapper.constructTotalLoss()
 
