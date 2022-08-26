@@ -31,7 +31,7 @@ STYLE_IMG_W = 500
 
 class Encoder(object):
     def __init__(self):
-        # initilize the data
+        # initialize the data
         pass
 
     def train(self, content_image, style_image):
@@ -39,7 +39,7 @@ class Encoder(object):
         pass
 
     def loss(self):
-        # loss fucntion
+        # loss function
         pass
 
     def grad(self):
@@ -51,7 +51,7 @@ class Encoder(object):
         pass
 
 
-# =============================<Helper Fuctions>=================================
+# =============================<Helper Functions>=================================
 # load images
 def preprocess_data_set(data_set):
     ((x_training, y_training), (x_testing, y_testing)) = data_set
@@ -99,7 +99,7 @@ def get_data_set():
     return preprocess_data_set(data_set)
 
 
-# =============================<Helper Fuctions>=================================
+# =============================<Helper Functions>=================================
 
 
 def train():
