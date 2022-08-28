@@ -1,15 +1,15 @@
 import os
 import numpy as np
 import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import backend as K
+import keras
+import keras.layers
+from keras import backend as K
 import random
 from PIL import Image
 from scipy.optimize import (
     fmin_l_bfgs_b,
 )  # https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.fmin_l_bfgs_b.html
-from tensorflow.keras.applications import vgg19
-from tensorflow.keras.preprocessing.image import load_img, img_to_array
+from keras.utils import load_img, img_to_array
 from scipy.optimize import fmin_l_bfgs_b
 import time
 import warnings
@@ -31,7 +31,7 @@ STYLE_IMG_W = 500
 
 class Encoder(object):
     def __init__(self):
-        # initilize the data
+        # initialize the data
         pass
 
     def train(self, content_image, style_image):
@@ -39,7 +39,7 @@ class Encoder(object):
         pass
 
     def loss(self):
-        # loss fucntion
+        # loss function
         pass
 
     def grad(self):
@@ -51,7 +51,7 @@ class Encoder(object):
         pass
 
 
-# =============================<Helper Fuctions>=================================
+# =============================<Helper Functions>=================================
 # load images
 def preprocess_data_set(data_set):
     ((x_training, y_training), (x_testing, y_testing)) = data_set
@@ -79,9 +79,7 @@ def load_images(dir):
     files = os.listdir(dir)
     list_of_images = []
     for filename in files:
-        cImg = load_img(
-            f"{dir}/{filename}"
-        )
+        cImg = load_img(f"{dir}/{filename}")
         list_of_images.append(cImg)
     return list_of_images
 
@@ -99,7 +97,7 @@ def get_data_set():
     return preprocess_data_set(data_set)
 
 
-# =============================<Helper Fuctions>=================================
+# =============================<Helper Functions>=================================
 
 
 def train():
@@ -119,20 +117,26 @@ def main():
     images = get_data_set()
 
     model = keras.Sequential()
-    model.add(keras.layers.Conv2D(32, (3, 3), activation='relu', input_shape=(CONTENT_IMG_H, CONTENT_IMG_W, 3)))
+    model.add(
+        keras.layers.Conv2D(
+            32, (3, 3), activation="relu", input_shape=(CONTENT_IMG_H, CONTENT_IMG_W, 3)
+        )
+    )
     model.add(keras.layers.BatchNormalization())
     model.add(keras.layers.MaxPooling2D())
     model.add(keras.layers.BatchNormalization())
-    model.add(keras.layers.Conv2D(64, (2, 2), activation='relu'))
+    model.add(keras.layers.Conv2D(64, (2, 2), activation="relu"))
     model.add(keras.layers.BatchNormalization())
-    model.add(keras.layers.Conv2DTranspose(64, (2, 2), activation='relu'))
+    model.add(keras.layers.Conv2DTranspose(64, (2, 2), activation="relu"))
     model.add(keras.layers.BatchNormalization())
     model.add(keras.layers.UpSampling2D())
     model.add(keras.layers.BatchNormalization())
-    model.add(keras.layers.Conv2DTranspose(32, (3, 3), activation='relu'))
+    model.add(keras.layers.Conv2DTranspose(32, (3, 3), activation="relu"))
     model.add(keras.layers.BatchNormalization())
-    model.add(keras.layers.Conv2DTranspose(3, (4, 4), padding='same', activation='sigmoid'))
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+    model.add(
+        keras.layers.Conv2DTranspose(3, (4, 4), padding="same", activation="sigmoid")
+    )
+    model.compile(optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"])
     model.summary()
     model.fit(x=images[0][0], y=images[0][1], epochs=10, batch_size=15)
     model.evaluate(x=images[1][0], y=images[1][1])
